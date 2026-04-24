@@ -9,6 +9,9 @@ env/
 venv/
 .Python
 
+# Configuration files with sensitive data
+config.js
+
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
@@ -17,6 +20,10 @@ venv/
 
 # OS files
 .DS_Store
+Thumbs.db
+
+# Log files
+*.log
 Thumbs.db
 
 # Log files
