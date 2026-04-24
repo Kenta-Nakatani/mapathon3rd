@@ -9,6 +9,9 @@ env/
 venv/
 .Python
 
+# Config files with secrets
+config.js
+
 # Configuration files with sensitive data
 config.js
 

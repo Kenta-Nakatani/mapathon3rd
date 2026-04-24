@@ -173,8 +173,9 @@
         <p>基地を選択してください。</p>
     </div>
 
+    <script src="config.js"></script>
     <script>
-        mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
+        mapboxgl.accessToken = window.MAPBOX_ACCESS_TOKEN;
 
         const map = new mapboxgl.Map({
             container: 'map',
