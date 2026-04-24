@@ -16,9 +16,6 @@ concurrency:
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,6 +26,12 @@ jobs:
           cat > config.js << 'EOF'
           // Mapbox Access Token - auto-generated from GitHub Secrets
           const MAPBOX_ACCESS_TOKEN = '${{ secrets.MAPBOX_ACCESS_TOKEN }}';
+          
+          if (typeof module !== 'undefined' && module.exports) {
+              module.exports = { MAPBOX_ACCESS_TOKEN };
+          } else {
+              window.MAPBOX_ACCESS_TOKEN = MAPBOX_ACCESS_TOKEN;
+          }
           EOF
 
       - name: Setup Pages
