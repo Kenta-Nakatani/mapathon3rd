@@ -24,48 +24,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify Mapbox token secret is set
-        env:
-          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+      - name: Generate config.js from Secrets
         run: |
-          if [ -z "$MAPBOX_ACCESS_TOKEN" ]; then
-            echo "::error::GitHub Secret 'MAPBOX_ACCESS_TOKEN' is not set."
-            echo "Go to Settings > Secrets and variables > Actions and add MAPBOX_ACCESS_TOKEN."
-            exit 1
-          fi
-          echo "Mapbox token is set (length: ${#MAPBOX_ACCESS_TOKEN})."
-
-      - name: Prepare deployment directory
-        env:
-          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
-        run: |
-          mkdir -p _site
-          # Copy only the files needed for the web presentation.
-          # We deliberately exclude CSVs with non-ASCII filenames, Python
-          # scripts, and the .git directory — these are not needed on
-          # GitHub Pages and the non-ASCII filename can break artifact upload.
-          cp index.html _site/
-          cp sekiyu.geojson _site/
-          cp ukai.geojson _site/
-          cp us_bases_with_coords.csv _site/
-          # Generate config.js from the GitHub Secret.
-          # Using an env var (not direct interpolation) avoids YAML escaping
-          # issues if the token ever contains special characters.
-          cat > _site/config.js << EOF
-          // Auto-generated from GitHub Secret at deploy time.
-          const MAPBOX_ACCESS_TOKEN = '${MAPBOX_ACCESS_TOKEN}';
+          cat > config.js << 'EOF'
+          // Mapbox Access Token - auto-generated from GitHub Secrets
+          const MAPBOX_ACCESS_TOKEN = '${{ secrets.MAPBOX_ACCESS_TOKEN }}';
           EOF
-          echo "Files staged for deployment:"
-          ls -la _site/
 
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v4
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '_site'
+          path: '.'
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v2
