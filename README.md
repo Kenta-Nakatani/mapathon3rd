@@ -12,7 +12,7 @@ An interactive Mapbox-based presentation on Taiwan contingency and Japan's energ
    
 2. **Update config.js:**
    - Open `config.js`
-   - Replace `'YOUR_MAPBOX_TOKEN_HERE'` with your token:
+   - Replace `'YOUR_MAPBOX_ACCESS_TOKEN'` with your token:
    ```javascript
    const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoieW91cnVzZXJuYW1lIiwiYSI6ImNleW91cnRva2VuIn0...';
    ```
