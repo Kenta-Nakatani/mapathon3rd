@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>US Military Bases Map</title>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { width: 100vw; height: 100vh; }
+
+        /* 詳細ウィンドウのスタイル */
+        #details {
+            width: 25%;
+            height: 80vh;
+            position: absolute;
+            right: 0;
+            top: 0;
+            padding: 20px;
+            background: rgba(44, 44, 44, 0.9);
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+            display: none;
+            overflow-y: auto;
+            color: #D3D3D3;
+        }
+
+        #details h3 {
+            margin-top: 0;
+        }
+
+        #details .close-btn {
+            cursor: pointer;
+            background: gray;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        /* 基地リストウィンドウのスタイル */
+        #bases-list {
+            width: 30%;
+            height: 80vh;
+            position: absolute;
+            left: 0;
+            top: 0;
+            padding: 20px;
+            background: rgba(64, 64, 64, 0.9);
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            display: none;
+            overflow-y: auto;
+            color: #D3D3D3;
+        }
+
+        #bases-list h3 {
+            margin-top: 0;
+        }
+
+        #bases-list .close-btn {
+            cursor: pointer;
+            background: gray;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+
+        /* 検索バー */
+        #search-bar {
+            width: calc(100% - 40px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #000;
+        }
+
+        /* 左上のボタン */
+        #show-bases-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(240, 240, 240, 0.95);
+            color: #111;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+            font-size: 16px;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        #show-bases-btn:hover {
+            background: rgba(255, 255, 255, 0.97);
+        }
+
+        #next-slide-btn, #prev-slide-btn {
+            position: absolute;
+            bottom: 20px;
+            background: rgba(240, 240, 240, 0.95);
+            color: #111;
+            border: none;
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 1000;
+            font-size: 32px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+            display: none;
+            line-height: 72px;
+            text-align: center;
+        }
+
+        #next-slide-btn {
+            right: 20px;
+        }
+
+        #prev-slide-btn {
+            right: 108px;
+        }
+
+        #next-slide-btn:hover,
+        #prev-slide-btn:hover {
+            background: rgba(255, 255, 255, 0.98);
+        }
+
+        /* スライド説明文のスタイル */
+        #slide-text {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            width: 38%;
+            max-width: 550px;
+            max-height: 300px;
+            padding: 18px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #FFF;
+            border-radius: 12px;
+            font-size: 15px;
+            line-height: 1.6;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="slide-text"></div>
+    <button id="show-bases-btn">US military base in Japan</button>
+    <button id="prev-slide-btn">←</button>
+    <button id="next-slide-btn">→</button>
+    <div id="bases-list">
+        <button class="close-btn" style="position: absolute; top: 10px; right: 10px;">close</button>
+        <h3>US Military Bases in Japan</h3>
+        <input type="text" id="search-bar" placeholder="Search bases...">
+        <div id="bases-content"></div>
+    </div>
+    <div id="details">
+        <button class="close-btn">close</button>
+        <h3>Base details</h3>
+        <p>基地を選択してください。</p>
+    </div>
+
+    <script>
+        mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
+
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/dark-v11',
+            center: [0, 20],
+            zoom: 1.5,
+            pitch: 0,
+            bearing: 0
+        });
+
+        const detailsContainer = document.getElementById('details');
+        const basesListContainer = document.getElementById('bases-list');
+        const showBasesBtn = document.getElementById('show-bases-btn');
+        const searchBar = document.getElementById('search-bar');
+        const basesContent = document.getElementById('bases-content');
+        const prevSlideBtn = document.getElementById('prev-slide-btn');
+        const nextSlideBtn = document.getElementById('next-slide-btn');
+
+        const oilRouteGeoJSON = {
+            type: 'FeatureCollection',
+            features: [
+                {
+                    type: 'Feature',
+                    properties: {},
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: [
+                            [60.68946567022158, 23.789777395756786],
+                            [80.61481111694457, 2.4370710337479977],
+                            [96.6477118763467, 7.3093102853338365],
+                            [106.10253366250447, -1.3597279544010377],
+                            [107.71695789426559, 6.976925934679102],
+                            [124.43350382795722, 22.7179346215719],
+                            [128.3605870465683, 29.273438788261487]
+                        ]
+                    }
+                }
+            ]
+        };
+
+        const ukaiRouteGeoJSON = {
+            type: 'FeatureCollection',
+            features: [
+                {
+                    type: 'Feature',
+                    properties: {},
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: [
+                            [52.505871711564424, 26.728045666072347],
+                            [56.5618285576393, 26.30989613259456],
+                            [78.71705628004918, 1.0766865550255034],
+                            [114.8165141812741, -12.916991151758822],
+                            [116.69448205063372, -4.1552101995116],
+                            [121.47037107689539, 4.372471641219946],
+                            [132.39886559705263, 7.301160995860727],
+                            [134.18290682452846, 31.39109920876713]
+                        ]
+                    }
+                }
+            ]
+        };
+
+        const taiwanWarningGeoJSON = {
+            type: 'FeatureCollection',
+            features: [
+                {
+                    type: 'Feature',
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [121.0, 23.5]  // 台湾周辺の座標
+                    },
+                    properties: {
+                        name: 'Taiwan Strait Conflict Zone'
+                    }
+                }
+            ]
+        };
+
+        const slides = [
+            {
+                text: '日本が消費する石油の約9割は、中東から海上輸送で運ばれている。その主要ルートは、ペルシャ湾を出てホルムズ海峡を通過し、インド洋・マラッカ海峡を経由して台湾海峡を抜け、日本へ至る。このルートは「シーレーン」と呼ばれ、日本のエネルギー供給の根幹を支えている。<br><br>About 90% of Japan\'s oil consumption is transported by sea from the Middle East. The main route leaves the Persian Gulf, passes through the Strait of Hormuz, crosses the Indian Ocean and the Malacca Strait, then goes through the Taiwan Strait to Japan. This route is called a "sea lane" and forms the backbone of Japan\'s energy supply.',
+                center: [123.5, 24.5],
+                zoom: 3.5,
+                pitch: 0,
+                bearing: 0,
+                showBases: false,
+                showRoute: true,
+                showRoute2: false,
+                showWarning: false,
+                autoAdvance: false
+            },
+            {
+                text: '台湾海峡は、中国大陸と台湾の間に位置する幅約180kmの水路である。現在、日本向けのタンカーの多くがこの海峡を通過している。地理的に狭く、迂回が難しいこの水路は、輸送ルート上の重要な通過点となっている。<br><br>The Taiwan Strait is a roughly 180 km wide waterway between mainland China and Taiwan. Many tankers bound for Japan currently pass through this strait. Because it is geographically narrow and difficult to bypass, it is a critical chokepoint on the transport route.',
+                center: [121.0, 23.5],
+                zoom: 6,
+                pitch: 0,
+                bearing: 0,
+                showBases: false,
+                showRoute: true,
+                showRoute2: false,
+                showWarning: false,
+                autoAdvance: false
+            },
+            {
+                text: '仮に台湾海峡で軍事的な緊張が高まった場合、タンカーの安全な航行が困難になる可能性がある。海峡の封鎖や通行制限が生じれば、日本への石油輸送は直接的な影響を受ける。このシナリオは、日本のエネルギー安全保障における主要なリスクの一つとして指摘されている。<br><br>If military tensions rise in the Taiwan Strait, safe navigation for tankers may become difficult. If the strait is blocked or passage is restricted, oil shipments to Japan would be directly affected. This scenario is cited as one of the major risks to Japan\'s energy security.',
+                center: [121.0, 23.5],
+                zoom: 6,
+                pitch: 0,
+                bearing: 0,
+                showBases: false,
+                showRoute: true,
+                showRoute2: false,
+                showWarning: true,
+                autoAdvance: false
+            },
+            {
+                text: '日本国内および周辺には、複数の米軍基地が存在している。有事の際、これらの基地は攻撃対象として狙われる一方、周辺海域での軍事活動の活発化により、民間船舶の航行環境はさらに複雑になることが想定される。<br><br>There are multiple U.S. military bases in Japan and the surrounding region. In a crisis, these bases can be targeted as potential attack points, and increased military activity in nearby waters is likely to make civilian shipping conditions even more complicated.',
+                center: [137, 35],
+                zoom: 4.5,
+                pitch: 45,
+                bearing: -17.6,
+                showBases: true,
+                showRoute: false,
+                showRoute2: false,
+                showWarning: false,
+                autoAdvance: false
+            },
+            {
+                text: '台湾海峡を避ける迂回ルートは、フィリピン東側を通りロンボク海峡やマカッサル海峡を経由する。このルートは、通常航路に比べて航行距離が30〜40%増え、およそ5,000〜7,000kmの追加距離となる。航海日数は通常より2〜4日長くなり、燃料費や輸送費も同程度に上昇する可能性が高い。<br><br>The detour route avoids the Taiwan Strait by passing east of the Philippines through the Lombok and Makassar Straits. It increases distance by roughly 30–40%, adding about 5,000–7,000 km, and typically adds 2–4 sailing days. Fuel and transport costs rise by a similar margin, making the detour significantly more expensive.',
+                center: [123.5, 24.5],
+                zoom: 3.5,
+                pitch: 0,
+                bearing: 0,
+                showBases: false,
+                showRoute: false,
+                showRoute2: true,
+                showWarning: false,
+                autoAdvance: false
+            },
+            {
+                text: '通常ルートと迂回ルートを並べると、距離差と時間差がひと目でわかる。迂回ルートは安全性を高める可能性があるが、距離は約30〜40%増、所要時間は2〜4日延び、追加の燃料や運賃を伴う。安全とコストのどちらを優先するかが判断の鍵になる。<br><br>Placing the regular route and detour side by side highlights the distance and time gap. The detour may reduce risk, but it lengthens the route by roughly 30–40% and adds 2–4 days of transit, along with extra fuel and freight costs. The choice depends on whether safety or cost is the higher priority.',
+                center: [123.5, 24.5],
+                zoom: 3.5,
+                pitch: 0,
+                bearing: 0,
+                showBases: false,
+                showRoute: true,
+                showRoute2: true,
+                showWarning: false,
+                autoAdvance: false
+            },
+            {
+                text: '今回伝えたいのは、台湾有事は単なる安全保障の問題ではなく、日本のエネルギー問題にも直結しているということだ。福島の3/11以降、新しい原発の建設は難しくなり、日本は火力発電に依存している。そのため石油の重要性が高く、航路の安全性は経済にも直結する。地政学的なリスクとエネルギー安全保障は密接に結びついている。<br><br>The point I want to make is that a Taiwan contingency is not just a security issue; it is also directly tied to Japan\'s energy problem. Since the Fukushima March 11 disaster, building new nuclear power plants has become difficult, and Japan relies heavily on thermal power. That makes oil more important, so the safety of shipping routes is directly connected to the economy. Geopolitical risk and energy security are closely linked.',
+                center: [123.5, 24.5],
+                zoom: 3.5,
+                pitch: 0,
+                bearing: 0,
+                showBases: false,
+                showRoute: true,
+                showRoute2: true,
+                showWarning: false,
+                autoAdvance: false
+            }
+        ];
+
+        let currentSlide = 0;
+        let slideTimeout = null;
+
+        function showSlide(index) {
+            currentSlide = index;
+            const slide = slides[index];
+            map.flyTo({
+                center: slide.center,
+                zoom: slide.zoom,
+                pitch: slide.pitch,
+                bearing: slide.bearing,
+                speed: 0.6,
+                essential: true
+            });
+
+            // スライド説明文を更新
+            document.getElementById('slide-text').innerHTML = slide.text;
+
+            if (map.isStyleLoaded()) {
+                map.setLayoutProperty('base-layer', 'visibility', slide.showBases ? 'visible' : 'none');
+                map.setLayoutProperty('oil-route-line', 'visibility', slide.showRoute ? 'visible' : 'none');
+                map.setLayoutProperty('oil-route-arrow', 'visibility', slide.showRoute ? 'visible' : 'none');
+                map.setLayoutProperty('ukai-route-line', 'visibility', slide.showRoute2 ? 'visible' : 'none');
+                map.setLayoutProperty('ukai-route-arrow', 'visibility', slide.showRoute2 ? 'visible' : 'none');
+                map.setLayoutProperty('warning-layer', 'visibility', slide.showWarning ? 'visible' : 'none');
+            }
+
+            nextSlideBtn.style.display = index < slides.length - 1 ? 'block' : 'none';
+            prevSlideBtn.style.display = index > 0 ? 'block' : 'none';
+            if (slide.autoAdvance && slide.delay) {
+                clearTimeout(slideTimeout);
+                slideTimeout = setTimeout(() => {
+                    showSlide(index + 1);
+                }, slide.delay);
+            }
+        }
+
+        nextSlideBtn.addEventListener('click', () => {
+            if (currentSlide < slides.length - 1) {
+                showSlide(currentSlide + 1);
+            }
+        });
+
+        prevSlideBtn.addEventListener('click', () => {
+            if (currentSlide > 0) {
+                showSlide(currentSlide - 1);
+            }
+        });
+
+        const prefectures = ['北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県', '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県', '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県', '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県', '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'];
+
+        function getPrefecture(location) {
+            if (location.startsWith('北海道')) return '北海道';
+            const match = location.match(/^(.+?県|.+(道|府))/);
+            return match ? match[0] : 'その他';
+        }
+
+        function renderList(grouped, searchTerm = '') {
+            basesContent.innerHTML = '';
+            prefectures.forEach(pref => {
+                if (grouped[pref]) {
+                    const filtered = grouped[pref].filter(row => row['施設・区域名'].toLowerCase().includes(searchTerm.toLowerCase()));
+                    if (filtered.length > 0) {
+                        const prefDiv = document.createElement('div');
+                        prefDiv.className = 'prefecture';
+                        prefDiv.innerHTML = `<h4>${pref}</h4>`;
+                        filtered.forEach(row => {
+                            const baseDiv = document.createElement('div');
+                            baseDiv.className = 'base-item';
+                            baseDiv.textContent = row['施設・区域名'];
+                            baseDiv.addEventListener('click', () => {
+                                map.flyTo({
+                                    center: [row.longitude, row.latitude],
+                                    zoom: 10
+                                });
+                            });
+                            prefDiv.appendChild(baseDiv);
+                        });
+                        basesContent.appendChild(prefDiv);
+                    }
+                }
+            });
+        }
+
+        // CSVファイルのパス
+        const csvFilePath = 'us_bases_with_coords.csv';
+
+        // CSVを読み込んでGeoJSONに変換
+        Papa.parse(csvFilePath, {
+            download: true,
+            header: true,
+            complete: function(results) {
+                const features = results.data
+                    .filter(row => row.latitude && row.longitude)
+                    .map(row => ({
+                        type: 'Feature',
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [parseFloat(row.longitude), parseFloat(row.latitude)]
+                        },
+                        properties: row
+                    }));
+
+                const geojsonData = {
+                    type: 'FeatureCollection',
+                    features: features
+                };
+
+                const grouped = {};
+                results.data.forEach(row => {
+                    if (row.latitude && row.longitude) {
+                        const pref = getPrefecture(row['所在地1']);
+                        if (!grouped[pref]) grouped[pref] = [];
+                        grouped[pref].push(row);
+                    }
+                });
+
+                map.on('load', () => {
+                    // 基地データをソースとして追加
+                    map.addSource('bases', { "type": "geojson", "data": geojsonData });
+                    map.addSource('oil-route', { "type": "geojson", "data": oilRouteGeoJSON });
+                    map.addSource('ukai-route', { "type": "geojson", "data": ukaiRouteGeoJSON });
+                    map.addSource('taiwan-warning', { "type": "geojson", "data": taiwanWarningGeoJSON });
+
+                    // 基地のポイントを描画
+                    map.addLayer({
+                        "id": "base-layer",
+                        "type": "circle",
+                        "source": "bases",
+                        "paint": {
+                            "circle-color": "#FF0000",  // 赤色
+                            "circle-radius": 6,
+                            "circle-opacity": 0.8
+                        },
+                        "layout": {
+                            "visibility": "none"
+                        }
+                    });
+
+                    // 石油ルートを描画
+                    map.addLayer({
+                        id: 'oil-route-line',
+                        type: 'line',
+                        source: 'oil-route',
+                        layout: {
+                            visibility: 'none',
+                            'line-join': 'round',
+                            'line-cap': 'round'
+                        },
+                        paint: {
+                            'line-color': '#FFD400',
+                            'line-width': 6,
+                            'line-opacity': 0.95
+                        }
+                    });
+
+                    map.addLayer({
+                        id: 'ukai-route-line',
+                        type: 'line',
+                        source: 'ukai-route',
+                        layout: {
+                            visibility: 'none',
+                            'line-join': 'round',
+                            'line-cap': 'round'
+                        },
+                        paint: {
+                            'line-color': '#00BFFF',
+                            'line-width': 6,
+                            'line-opacity': 0.95
+                        }
+                    });
+
+                    map.addLayer({
+                        id: 'ukai-route-arrow',
+                        type: 'symbol',
+                        source: 'ukai-route',
+                        layout: {
+                            'symbol-placement': 'line',
+                            'symbol-spacing': 160,
+                            'text-field': '➤',
+                            'text-size': 20,
+                            'visibility': 'none'
+                        },
+                        paint: {
+                            'text-color': '#00BFFF',
+                            'text-halo-color': '#000',
+                            'text-halo-width': 1
+                        }
+                    });
+
+                    // 台湾警告ゾーンを描画
+                    map.addLayer({
+                        id: 'warning-layer',
+                        type: 'circle',
+                        source: 'taiwan-warning',
+                        paint: {
+                            'circle-color': '#FF0000',
+                            'circle-radius': 491,
+                            'circle-opacity': 0.2
+                        },
+                        layout: {
+                            visibility: 'none'
+                        }
+                    });
+
+                    // ポイントをクリックしたときに詳細ウィンドウを表示
+                    map.on('click', 'base-layer', (e) => {
+                        const properties = e.features[0].properties;
+                        const name = properties['施設・区域名'];
+                        const purpose = properties['用途'];
+                        const location = properties['所在地1'];
+
+                        // 詳細ウィンドウを更新
+                        detailsContainer.style.display = 'block';
+                        detailsContainer.querySelector('h3').textContent = 'Base details';
+                        detailsContainer.querySelector('p').innerHTML = `
+                            <p><strong>Name:</strong> ${name}</p>
+                            <p><strong>Purpose:</strong> ${purpose}</p>
+                            <p><strong>Location:</strong> ${location}</p>
+                        `;
+                    });
+
+                    // 閉じるボタンのイベントリスナーを追加
+                    const detailsCloseBtn = detailsContainer.querySelector('.close-btn');
+                    detailsCloseBtn.addEventListener('click', () => {
+                        detailsContainer.style.display = 'none';
+                    });
+
+                    // マウスカーソルをポインターに変更
+                    map.on('mouseenter', 'base-layer', () => {
+                        map.getCanvas().style.cursor = 'pointer';
+                    });
+
+                    // マウスカーソルをデフォルトに戻す
+                    map.on('mouseleave', 'base-layer', () => {
+                        map.getCanvas().style.cursor = '';
+                    });
+
+                    showSlide(0);
+                });
+
+                // ボタンのイベントリスナー
+                showBasesBtn.addEventListener('click', () => {
+                    basesListContainer.style.display = 'block';
+                    renderList(grouped);
+                });
+
+                // 閉じるボタン
+                const basesCloseBtn = basesListContainer.querySelector('.close-btn');
+                basesCloseBtn.addEventListener('click', () => {
+                    basesListContainer.style.display = 'none';
+                });
+
+                // 検索バー
+                searchBar.addEventListener('input', (e) => {
+                    renderList(grouped, e.target.value);
+                });
+            },
+            error: function(error) {
+                console.error('Error loading CSV file:', error);
+            }
+        });
+    </script>
+</body>
+</html>
