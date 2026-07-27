@@ -28,11 +28,14 @@
     </header>
 
     <section id="story" class="story" aria-live="polite">
-      <div class="progress"><span id="chapter">01 / 07</span><i><b id="progress"></b></i></div>
+      <div class="progress"><span id="chapter">01 / 08</span><i><b id="progress"></b></i></div>
       <p id="kicker" class="kicker"></p>
       <h2 id="title"></h2>
       <p id="copy" class="copy"></p>
       <div id="facts" class="facts"></div>
+      <div id="impact-flow" class="impact-flow" hidden></div>
+      <div id="impact-cards" class="impact-cards" hidden></div>
+      <div id="slide-source" class="slide-source" hidden></div>
       <nav class="story-nav" aria-label="ストーリー操作">
         <button id="prev" aria-label="前の場面">←</button>
         <div id="dots" class="dots"></div>
@@ -74,7 +77,13 @@
       <button id="source-open" data-t="sources">出典</button>
       <div id="source-box" hidden>
         <p data-t="sourceText">施設データ：e-Stat「在日米軍施設・区域の状況」。航路は説明用の概略図です。</p>
-        <a href="https://www.e-stat.go.jp/stat-search/files?page=1&amp;layout=datalist&amp;toukei=00700011&amp;kikan=00700&amp;tstat=000001149526&amp;cycle=0&amp;tclass1=000001241996&amp;tclass2val=0" target="_blank" rel="noreferrer">e-Stat ↗</a>
+        <ul class="source-list">
+          <li><a href="https://www.e-stat.go.jp/stat-search/files?page=1&amp;layout=datalist&amp;toukei=00700011&amp;kikan=00700&amp;tstat=000001149526&amp;cycle=0&amp;tclass1=000001241996&amp;tclass2val=0" target="_blank" rel="noreferrer">e-Stat ↗</a></li>
+          <li><a href="https://www.boj.or.jp/mopo/outlook/gor2604b.pdf" target="_blank" rel="noreferrer" data-t="sourceBojOutlook">日本銀行「経済・物価情勢の展望（2026年4月）」図表B2-1 ↗</a></li>
+          <li><a href="https://www.boj.or.jp/about/press/koen_2026/ko260603a.htm" target="_blank" rel="noreferrer" data-t="sourceBojSpeech">日本銀行「最近の経済・物価情勢と金融政策運営」↗</a></li>
+          <li><a href="https://www.enecho.meti.go.jp/about/whitepaper/2024/html/1-2-2.html" target="_blank" rel="noreferrer" data-t="sourceEnergyWhitepaper">資源エネルギー庁「エネルギー白書2024」↗</a></li>
+          <li><a href="https://www.mlit.go.jp/hakusyo/mlit/r06/hakusho/r07/html/n1111000.html" target="_blank" rel="noreferrer" data-t="sourceMlitWhitepaper">国土交通省「国土交通白書」↗</a></li>
+        </ul>
       </div>
     </footer>
     <div id="toast" class="toast" role="status"></div>
