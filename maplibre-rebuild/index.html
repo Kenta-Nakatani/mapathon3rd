@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="台湾海峡と日本のエネルギー安全保障を読み解くストーリーマップ">
+  <title>SEA LINES | 台湾海峡と日本のエネルギー安全保障</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a class="skip" href="#story">本文へ移動</a>
+  <main>
+    <div id="map" aria-label="石油輸送ルートと在日米軍施設の地図"></div>
+    <div class="shade" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <div class="brand"><span></span><div><small>INTERACTIVE STORY MAP</small><h1>SEA LINES</h1></div></div>
+      <div class="actions">
+        <div class="language" role="group" aria-label="表示言語">
+          <button class="is-active" data-lang="ja" aria-pressed="true">JP</button>
+          <button data-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <button id="explore-open" class="command" aria-expanded="false" aria-controls="explore">
+          <b aria-hidden="true">⌕</b><span data-t="explore">基地を探す</span>
+        </button>
+      </div>
+    </header>
+
+    <section id="story" class="story" aria-live="polite">
+      <div class="progress"><span id="chapter">01 / 07</span><i><b id="progress"></b></i></div>
+      <p id="kicker" class="kicker"></p>
+      <h2 id="title"></h2>
+      <p id="copy" class="copy"></p>
+      <div id="facts" class="facts"></div>
+      <nav class="story-nav" aria-label="ストーリー操作">
+        <button id="prev" aria-label="前の場面">←</button>
+        <div id="dots" class="dots"></div>
+        <button id="next" class="next" aria-label="次の場面">→</button>
+      </nav>
+    </section>
+
+    <aside id="explore" class="explore" aria-hidden="true">
+      <div class="panel-head">
+        <div><small data-t="database">DATABASE</small><h2 data-t="basesTitle">在日米軍施設</h2></div>
+        <button id="explore-close" class="close" aria-label="閉じる">×</button>
+      </div>
+      <label class="field"><span data-t="searchLabel">施設名を検索</span><input id="search" type="search" autocomplete="off"></label>
+      <div class="filters">
+        <label class="field"><span data-t="prefecture">都道府県</span><select id="prefecture"></select></label>
+        <label class="field"><span data-t="purpose">用途</span><select id="purpose"></select></label>
+      </div>
+      <div class="summary"><strong id="count">0</strong><span data-t="results">件の施設</span><button id="reset" data-t="reset">条件を解除</button></div>
+      <div id="results" class="results"></div>
+      <div id="error" class="error" hidden><p data-t="loadError">施設データを読み込めませんでした。</p><button id="retry" data-t="retry">再読み込み</button></div>
+    </aside>
+
+    <aside id="detail" class="detail" aria-hidden="true">
+      <button id="detail-close" class="close" aria-label="閉じる">×</button>
+      <small>FACILITY DETAILS</small><h2 id="detail-name"></h2><dl id="detail-list"></dl>
+    </aside>
+
+    <section class="map-tools" aria-label="地図表示">
+      <button id="layers-open" class="command" aria-expanded="false"><b aria-hidden="true">≡</b><span data-t="layers">表示</span></button>
+      <div id="legend" class="legend" hidden>
+        <label><input type="checkbox" data-layer="regular" checked><i class="line regular"></i><span data-t="regularRoute">通常航路</span></label>
+        <label><input type="checkbox" data-layer="detour"><i class="line detour"></i><span data-t="detourRoute">迂回航路</span></label>
+        <label><input type="checkbox" data-layer="warning"><i class="dot warning"></i><span data-t="riskZone">台湾海峡リスク</span></label>
+        <label><input type="checkbox" data-layer="bases"><i class="dot bases"></i><span data-t="bases">米軍施設</span></label>
+      </div>
+    </section>
+
+    <footer class="source">
+      <button id="source-open" data-t="sources">出典</button>
+      <div id="source-box" hidden>
+        <p data-t="sourceText">施設データ：e-Stat「在日米軍施設・区域の状況」。航路は説明用の概略図です。</p>
+        <a href="https://www.e-stat.go.jp/stat-search/files?page=1&amp;layout=datalist&amp;toukei=00700011&amp;kikan=00700&amp;tstat=000001149526&amp;cycle=0&amp;tclass1=000001241996&amp;tclass2val=0" target="_blank" rel="noreferrer">e-Stat ↗</a>
+      </div>
+    </footer>
+    <div id="toast" class="toast" role="status"></div>
+  </main>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
